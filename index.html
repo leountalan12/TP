@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PSB SECURED TEST PORTAL 2026</title>
+    
+    <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+
+    <style>
+        body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: #f0f2f5; margin: 0; color: #1c1e21; }
+        header { background: #800000; color: white; padding: 15px; text-align: center; font-weight: bold; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+        
+        /* Teacher View */
+        #teacherView { padding: 20px; }
+        .setup-card { background: white; padding: 25px; border-radius: 12px; max-width: 750px; margin: 0 auto 30px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); border-top: 6px solid #800000; }
+        .input-row { display: flex; gap: 15px; margin-bottom: 15px; flex-wrap: wrap; }
+        .input-group { text-align: left; flex: 1; min-width: 220px; }
+        .input-group label { display: block; font-size: 11px; font-weight: bold; color: #666; margin-bottom: 5px; text-transform: uppercase; }
+        
+        input { padding: 12px; width: 100%; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
+        input.error { border: 2px solid #ff4444; background: #fff8f8; }
+
+        .btn { padding: 12px 20px; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; text-transform: uppercase; }
+        .btn-gen { background: #0056b3; }
+        .btn-launch { background: #2e7d32; }
+        .btn-export { background: #ef6c00; }
+        .btn:disabled { background: #ccc; cursor: not-allowed; }
+        
+        /* Grid Management */
+        #grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 15px; padding: 10px; }
+        .student-box { background: #fff; padding: 10px; border-radius: 10px; border: 1px solid #ddd; text-align: left; position: relative; transition: all 0.3s ease; }
+        .student-box.active { border-left: 6px solid #2e7d32; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .student-box.warning { border: 2px solid #d32f2f; background: #fff8f7; }
+
+        .grid-video { width: 100%; aspect-ratio: 4/3; background: #000; border-radius: 6px; object-fit: cover; }
+        .student-identity { background: #f8f9fa; padding: 8px; border-radius: 4px; border-left: 4px solid #800000; margin: 8px 0; }
+        .id-name { font-size: 14px; font-weight: bold; color: #800000; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        
+        .stat-row { font-size: 11px; margin: 4px 0; display: flex; justify-content: space-between; border-bottom: 1px solid #eee; }
+        .v-val { color: #d32f2f; font-weight: bold; }
+
+        /* Student View */
+        #studentUI { display: none; padding: 15px; text-align: center; }
+        #overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.98); z-index: 10000; display: flex; align-items: center; justify-content: center; }
+        .login-box { background: white; padding: 35px; border-radius: 15px; width: 360px; box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
+        
+        .timer-box { background: #e3f2fd; padding: 10px 20px; border-radius: 8px; border: 2px solid #bbdefb; display: inline-block; margin-bottom: 15px; }
+        #timer { font-size: 32px; font-weight: bold; color: #d32f2f; font-family: 'Courier New', monospace; }
+        
+        .iframe-container { width: 100%; max-width: 1200px; margin: 0 auto; height: 78vh; border: 4px solid #800000; border-radius: 10px; background: white; position: relative; }
+        iframe { width: 100%; height: 100%; border: none; }
+
+        #localCam { position: fixed; bottom: 20px; right: 20px; width: 150px; border: 3px solid white; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); z-index: 999; display: none; }
+        .force-load-link { color: #0056b3; font-size: 12px; cursor: pointer; text-decoration: underline; margin-top: 10px; display: inline-block; }
+    </style>
+</head>
+<body>
+
+<header>PSB SECURED ONLINE SUMMATIVE TESTS</header>
+
+<div id="overlay" style="display:none;">
+    <div class="login-box">
+        <h3 style="color:#800000; margin-top:0;">Secure Session Login</h3>
+        <div class="input-group">
+            <label>Student Full Name</label>
+            <input type="text" id="sName" placeholder="Enter Name">
+        </div>
+        <div class="input-group" style="margin-top:15px;">
+            <label>Student ID Number</label>
+            <input type="text" id="sID" placeholder="Enter ID">
+        </div>
+        <button onclick="enterExam()" class="btn btn-gen" style="width:100%; margin-top:20px;">Verify & Access Form</button>
+    </div>
+</div>
+
+<div id="teacherView">
+    <div class="setup-card">
+        <div class="input-row">
+            <div class="input-group"><label>Grade & Section</label><input id="tGrade" placeholder="11-STEM"></div>
+            <div class="input-group"><label>Teacher Name</label><input id="tName" placeholder="Lastname"></div>
+        </div>
+        <div class="input-group" style="margin-bottom:15px;"><label>Google Form Link</label><input id="tForm" placeholder="Paste link from Google Forms"></div>
+        <div class="input-row">
+            <div class="input-group"><label>Minutes</label><input id="tMinutes" type="number" value="60"></div>
+            <div class="input-group"><label>Students</label><input id="tCount" type="number" value="45"></div>
+        </div>
+        <div class="input-group"><label>Shareable Link</label><input id="copyLink" readonly style="background:#f9f9f9; margin-bottom:15px;" placeholder="Generated link..."></div>
+        <div style="display:flex; gap:10px; flex-wrap: wrap;">
+            <button class="btn btn-gen" onclick="generateLink()">1. Generate Link</button>
+            <button id="launchBtn" class="btn btn-launch" onclick="initTeacher()" disabled>2. Start Monitoring</button>
+            <button class="btn btn-export" onclick="exportReport()">Export CSV Report</button>
+        </div>
+        <div id="roomStatus" style="margin-top:12px; font-weight:bold; color:#2e7d32;"></div>
+    </div>
+    <div id="grid"></div>
+</div>
+
+<div id="studentUI">
+    <div class="timer-box">
+        <span style="font-size:10px; font-weight:bold;">SECURE TIME REMAINING</span><br><div id="timer">00:00</div>
+    </div><br>
+    <button id="btnStart" class="btn btn-launch" style="padding:15px 45px; font-size:18px; margin-bottom:15px;" onclick="startOfficialTest()">Authorize Camera & Begin</button>
+    <div id="formContainer" class="iframe-container">
+        <iframe id="testFrame" allow="camera; microphone" sandbox="allow-forms allow-scripts allow-same-origin allow-popups"></iframe>
+    </div>
+    <span class="force-load-link" onclick="forceLoad()">Form not showing? Click here to refresh connection.</span>
+</div>
+
+<video id="localCam" autoplay muted playsinline></video>
+
+<script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const isStudent = urlParams.has("form");
+    const APP_PREFIX = "PSB_FINAL_2026_"; 
+    const PEER_CONFIG = { config: { 'iceServers': [{ 'urls': 'stun:stun.l.google.com:19302' }, { 'urls': 'stun:stun1.l.google.com:19302' }] } };
+    
+    let peer, dataConns = {}, stream, isRunning = false, roomId = "", timeLeft = 0;
+    let masterData = [];
+
+    async function init() {
+        if (isStudent) {
+            document.getElementById("teacherView").style.display = "none";
+            document.getElementById("overlay").style.display = "flex";
+            document.getElementById("studentUI").style.display = "block";
+            roomId = APP_PREFIX + urlParams.get("room");
+            timeLeft = parseInt(urlParams.get("time")) * 60;
+            updateTimer();
+            await faceapi.nets.tinyFaceDetector.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/');
+        }
+    }
+
+    // --- TEACHER LOGIC ---
+    function generateLink() {
+        const grade = document.getElementById("tGrade").value.trim();
+        const teacher = document.getElementById("tName").value.trim();
+        let form = document.getElementById("tForm").value.trim();
+        
+        if (!grade || !teacher || !form) return alert("Required: Grade, Teacher, and Form Link.");
+
+        // PERMANENT GOOGLE FORM FIX: Clean and Force Embedded Mode
+        if (form.includes("?")) form = form.split("?")[0]; // Strip existing params
+        if (form.endsWith("/")) form = form.slice(0, -1);
+        if (!form.endsWith("/viewform") && !form.endsWith("/embeddedform")) {
+            form += "/viewform";
+        }
+        form += "?embedded=true"; // Force the embed parameter
+
+        const seed = btoa(grade + teacher).substring(0, 10).toLowerCase();
+        const fullLink = `${window.location.origin}${window.location.pathname}?form=${encodeURIComponent(form)}&time=${document.getElementById("tMinutes").value}&room=${seed}`;
+        
+        document.getElementById("copyLink").value = fullLink;
+        document.getElementById("launchBtn").disabled = false;
+    }
+
+    function initTeacher() {
+        const grade = document.getElementById("tGrade").value.trim();
+        const teacher = document.getElementById("tName").value.trim();
+        const seed = btoa(grade + teacher).substring(0, 10).toLowerCase();
+        roomId = APP_PREFIX + seed;
+        
+        peer = new Peer(roomId, PEER_CONFIG);
+        
+        peer.on('open', (id) => {
+            document.getElementById("roomStatus").innerText = "● LIVE: ROOM " + id;
+            document.getElementById("launchBtn").disabled = true;
+        });
+
+        const count = document.getElementById("tCount").value;
+        const grid = document.getElementById("grid");
+        grid.innerHTML = "";
+        for (let i = 1; i <= count; i++) {
+            grid.innerHTML += `
+                <div class="student-box" id="slot-${i}" data-occupied="false">
+                    <video class="grid-video" autoplay muted playsinline></video>
+                    <div class="student-identity"><span class="id-name">Station ${i}</span><span class="id-num" style="font-size:10px; color:#888;">No Student</span></div>
+                    <div class="stat-row">Session: <span class="t-start">--</span> to <span class="t-end">--</span></div>
+                    <div class="stat-row">Tab Switch: <span class="v-val v-t">0</span></div>
+                    <div class="stat-row">Gaze Loss: <span class="v-val v-g">0</span></div>
+                    <button class="btn-kick" style="display:none; width:100%; background:#ff4444; border:none; color:white; font-size:10px; padding:6px; margin-top:5px; border-radius:4px; cursor:pointer" onclick="kick('${i}')">Force Kick</button>
+                </div>`;
+        }
+
+        peer.on('call', call => {
+            call.answer();
+            call.on('stream', remoteStream => {
+                // Address duplicate student issue: Match by Student ID
+                let slot = Array.from(document.querySelectorAll('.student-box')).find(s => s.dataset.sid === call.metadata.id);
+                if (!slot) slot = Array.from(document.querySelectorAll('.student-box')).find(s => s.dataset.occupied === "false");
+                
+                if (slot) {
+                    slot.dataset.occupied = "true";
+                    slot.dataset.peerid = call.peer;
+                    slot.dataset.sid = call.metadata.id;
+                    slot.classList.add('active');
+                    const vid = slot.querySelector('video');
+                    if (vid.srcObject !== remoteStream) vid.srcObject = remoteStream;
+                    slot.querySelector('.id-name').innerText = call.metadata.name;
+                    slot.querySelector('.id-num').innerText = "ID: " + call.metadata.id;
+                    slot.querySelector('.btn-kick').style.display = "block";
+                }
+            });
+        });
+
+        peer.on('connection', conn => {
+            dataConns[conn.peer] = conn;
+            conn.on('data', data => {
+                const box = document.querySelector(`.student-box[data-sid="${data.sid}"]`);
+                if (box) {
+                    box.querySelector('.t-start').innerText = data.start;
+                    box.querySelector('.t-end').innerText = data.end || "Live";
+                    box.querySelector('.v-t').innerText = data.tabs;
+                    box.querySelector('.v-g').innerText = data.gazes;
+                    if (data.tabs > 1 || data.gazes > 12) box.classList.add('warning');
+                    
+                    const idx = masterData.findIndex(s => s.id === data.sid);
+                    const entry = { name: data.name, id: data.sid, start: data.start, end: data.end || "Live", tabs: data.tabs, gaze: data.gazes };
+                    if (idx > -1) masterData[idx] = entry; else masterData.push(entry);
+                }
+            });
+        });
+    }
+
+    function kick(slotId) {
+        const box = document.getElementById(`slot-${slotId}`);
+        const pid = box.dataset.peerid;
+        if (pid && dataConns[pid] && confirm("End student session?")) {
+            dataConns[pid].send({ cmd: "KICK" });
+        }
+    }
+
+    function exportReport() {
+        if (masterData.length === 0) return alert("No data recorded yet.");
+        let csv = "Name,ID,Start,End,Tabs,Gaze\n";
+        masterData.forEach(s => csv += `"${s.name}","${s.id}","${s.start}","${s.end}",${s.tabs},${s.gaze}\n`);
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `Proctor_Report_${new Date().toLocaleDateString()}.csv`;
+        a.click();
+    }
+
+    // --- STUDENT LOGIC ---
+    function forceLoad() {
+        const frame = document.getElementById("testFrame");
+        frame.src = decodeURIComponent(urlParams.get("form"));
+    }
+
+    function enterExam() {
+        const n = document.getElementById("sName").value.trim();
+        const i = document.getElementById("sID").value.trim();
+        if (!n || !i) return alert("Please enter your name and ID.");
+        document.getElementById("overlay").style.display = "none";
+        forceLoad();
+    }
+
+    async function startOfficialTest() {
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 240 } });
+            document.getElementById("localCam").srcObject = stream;
+            document.getElementById("localCam").style.display = "block";
+            document.getElementById("btnStart").style.display = "none";
+            isRunning = true;
+            window.startTime = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+            
+            if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+            
+            peer = new Peer(null, PEER_CONFIG);
+            peer.on('open', (id) => {
+                const connectToTeacher = () => {
+                    if (!peer || peer.destroyed) return;
+                    const meta = { name: document.getElementById("sName").value, id: document.getElementById("sID").value };
+                    peer.call(roomId, stream, { metadata: meta });
+                    const c = peer.connect(roomId);
+                    c.on('data', d => { if (d.cmd === "KICK") endSession(); });
+                    window.activeConn = c;
+                    sync();
+                };
+                connectToTeacher();
+                setInterval(connectToTeacher, 25000); // Reconnect Heartbeat
+            });
+
+            setInterval(() => {
+                if (timeLeft <= 0) endSession();
+                if (isRunning) { timeLeft--; updateTimer(); }
+            }, 1000);
+
+            document.addEventListener("visibilitychange", () => { if (document.hidden && isRunning) { window.tC = (window.tC || 0) + 1; sync(); } });
+            setInterval(async () => {
+                if (!isRunning) return;
+                const det = await faceapi.detectSingleFace(document.getElementById("localCam"), new faceapi.TinyFaceDetectorOptions());
+                if (!det) { window.gC = (window.gC || 0) + 1; sync(); }
+            }, 3000);
+
+        } catch (e) { alert("Camera Access Required for Secure Proctoring."); }
+    }
+
+    function sync(endTime = null) {
+        if (window.activeConn && window.activeConn.open) {
+            window.activeConn.send({ 
+                name: document.getElementById("sName").value,
+                sid: document.getElementById("sID").value, 
+                tabs: window.tC || 0, gazes: window.gC || 0, 
+                start: window.startTime, end: endTime 
+            });
+        }
+    }
+
+    function updateTimer() {
+        let m = Math.floor(timeLeft / 60), s = timeLeft % 60;
+        document.getElementById("timer").innerText = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    }
+
+    function endSession() {
+        isRunning = false;
+        sync(new Date().toLocaleTimeString());
+        alert("Session Ended. Your progress has been logged.");
+        window.location.href = "about:blank";
+    }
+
+    init();
+</script>
+</body>
+</html>
