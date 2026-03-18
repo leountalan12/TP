@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PSB SECURED TEST PORTAL 2026</title>
+    
+    <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+
+    <style>
+        body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: #f0f2f5; margin: 0; color: #1c1e21; overflow-x: hidden; }
+        header { background: #800000; color: white; padding: 15px; text-align: center; font-weight: bold; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+        
+        /* Teacher UI */
+        #teacherView { padding: 20px; }
+        .setup-card { background: white; padding: 25px; border-radius: 12px; max-width: 900px; margin: 0 auto 30px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); border-top: 6px solid #800000; }
+        .input-row { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+        .input-group { text-align: left; flex: 1; min-width: 180px; }
+        .input-group label { display: block; font-size: 10px; font-weight: bold; color: #666; margin-bottom: 5px; text-transform: uppercase; }
+        input { padding: 10px; width: 100%; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
+
+        .btn { padding: 12px 18px; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; text-transform: uppercase; font-size: 11px; }
+        .btn-gen { background: #0056b3; }
+        .btn-launch { background: #2e7d32; }
+        .btn-export { background: #ef6c00; }
+        .btn-end-all { background: #b71c1c; }
+        
+        #grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 15px; padding: 10px; }
+        .student-box { background: #fff; padding: 10px; border-radius: 10px; border: 1px solid #ddd; position: relative; transition: all 0.3s; border-left: 5px solid #ccc; }
+        .student-box.active { border-left-color: #2e7d32; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .student-box.warning { border: 2px solid #d32f2f; background: #fff8f7; }
+        .grid-video { width: 100%; aspect-ratio: 4/3; background: #000; border-radius: 6px; object-fit: cover; transform: scaleX(-1); }
+        
+        .log-section { background: #f8f9fa; padding: 6px; border-radius: 4px; border-left: 3px solid #800000; margin-top: 5px; font-size: 11px; }
+        .log-line { display: flex; justify-content: space-between; margin-bottom: 2px; }
+        .log-val { font-weight: bold; color: #800000; }
+
+        /* Student UI */
+        #studentUI { display: none; padding: 10px; text-align: center; }
+        #overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.98); z-index: 10000; display: flex; align-items: center; justify-content: center; }
+        .login-box { background: white; padding: 30px; border-radius: 15px; width: 340px; }
+        .timer-box { background: #e3f2fd; padding: 8px 15px; border-radius: 8px; border: 1px solid #bbdefb; display: inline-block; margin-bottom: 10px; }
+        #timer { font-size: 28px; font-weight: bold; color: #d32f2f; font-family: monospace; }
+        .iframe-container { width: 100%; height: 75vh; border: 4px solid #800000; border-radius: 10px; background: white; margin-top: 10px; overflow: hidden; }
+        iframe { width: 100%; height: 100%; border: none; }
+        #localCam { position: fixed; bottom: 15px; right: 15px; width: 120px; border: 2px solid white; border-radius: 8px; z-index: 999; display: none; transform: scaleX(-1); }
+    </style>
+</head>
+<body>
+
+<header>PSB SECURED ONLINE SUMMATIVE TESTS</header>
+
+<div id="overlay" style="display:none;">
+    <div class="login-box">
+        <h3 style="color:#800000; margin:0 0 15px 0;">Verify Identity</h3>
+        <div class="input-group"><label>Full Name</label><input type="text" id="sName" placeholder="Juan Dela Cruz"></div>
+        <div class="input-group" style="margin-top:12px;"><label>Student ID</label><input type="text" id="sID" placeholder="2026-XXXX"></div>
+        <button onclick="enterExam()" class="btn btn-gen" style="width:100%; margin-top:20px;">Access Test Room</button>
+    </div>
+</div>
+
+<div id="teacherView">
+    <div class="setup-card">
+        <div class="input-row">
+            <div class="input-group"><label>Subject</label><input id="tSubj" oninput="saveFields()" placeholder="Science 10"></div>
+            <div class="input-group"><label>Grade/Section</label><input id="tGrade" oninput="saveFields()" placeholder="10-A"></div>
+            <div class="input-group"><label>Teacher Full Name</label><input id="tName" oninput="saveFields()" placeholder="Juan Dela Cruz"></div>
+        </div>
+        <div class="input-group" style="margin-bottom:12px;"><label>Google Form URL</label><input id="tForm" oninput="saveFields()" placeholder="https://forms.gle/..."></div>
+        <div class="input-row">
+            <div class="input-group"><label>Minutes</label><input id="tMinutes" oninput="saveFields()" type="number" value="60"></div>
+            <div class="input-group"><label>Students</label><input id="tCount" oninput="saveFields()" type="number" value="45"></div>
+        </div>
+        <div class="input-group"><label>Shareable Exam Link</label><input id="copyLink" readonly style="background:#f1f1f1; margin-bottom:15px; cursor: pointer;" onclick="this.select(); document.execCommand('copy'); alert('Link Copied!');"></div>
+        <div style="display:flex; gap:8px; flex-wrap: wrap;">
+            <button class="btn btn-gen" onclick="generateLink()">1. Generate</button>
+            <button id="launchBtn" class="btn btn-launch" onclick="initTeacher()">2. Start Monitor</button>
+            <button class="btn btn-export" onclick="exportReport()">Export CSV</button>
+            <button class="btn btn-end-all" onclick="endAllSessions()">End Session for All</button>
+        </div>
+        <div id="roomStatus" style="margin-top:15px; font-weight:bold; color:#800000; text-align:center; border: 2px dashed #800000; padding: 10px; display:none;"></div>
+    </div>
+    <div id="grid"></div>
+</div>
+
+<div id="studentUI">
+    <div class="timer-box"><div id="timer">00:00</div></div>
+    <div id="studentControls">
+        <button id="btnStart" class="btn btn-launch" style="padding:15px 40px; font-size: 16px;" onclick="startOfficialTest()">Authorize Camera & Begin Exam</button>
+        <div id="postStartActions" style="display:none; margin-top: 10px;">
+            <button id="btnComplete" class="btn btn-gen" onclick="finishExam()">Exam Complete</button>
+            <button id="btnLeave" class="btn btn-end-all" style="margin-left:10px;" onclick="endSession()">Leave Exam Room</button>
+        </div>
+    </div>
+    <div id="manualFixArea" style="background:#fff; padding:8px; border-radius:8px; margin:10px auto; max-width:450px; border:1px solid #ddd; font-size:12px;">
+        <span>Form Blank? Paste Link:</span>
+        <input type="text" id="manualUrl" style="width:50%; margin:0 5px; padding:5px;" placeholder="https://forms.gle/...">
+        <button id="btnShow" class="btn btn-gen" style="padding:5px 10px;" onclick="loadManualForm()">Show</button>
+    </div>
+    <div class="iframe-container"><iframe id="testFrame" allow="camera; microphone; fullscreen"></iframe></div>
+</div>
+
+<video id="localCam" autoplay muted playsinline webkit-playsinline></video>
+
+<script>
+    // NAT TRAVERSAL CONFIG (Fixes remote connections)
+    const PEER_CONFIG = {
+        'iceServers': [
+            { 'urls': 'stun:stun.l.google.com:19302' },
+            { 'urls': 'stun:stun1.l.google.com:19302' },
+            { 'urls': 'stun:stun2.l.google.com:19302' }
+        ]
+    };
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const isStudent = urlParams.has("form");
+    let peer, stream, isRunning = false, roomId = "", timeLeft = 0, examStart = "";
+    let dataConns = {};
+
+    window.onload = () => {
+        if (!isStudent) {
+            const saved = JSON.parse(localStorage.getItem('teacherSession') || '{}');
+            if (saved.subj) {
+                document.getElementById("tSubj").value = saved.subj || "";
+                document.getElementById("tGrade").value = saved.grade || "";
+                document.getElementById("tName").value = saved.name || "";
+                document.getElementById("tForm").value = saved.form || "";
+                document.getElementById("tMinutes").value = saved.mins || 60;
+                document.getElementById("tCount").value = saved.count || 45;
+            }
+        }
+        init();
+    };
+
+    function saveFields() {
+        if (!isStudent) {
+            localStorage.setItem('teacherSession', JSON.stringify({
+                subj: document.getElementById("tSubj").value,
+                grade: document.getElementById("tGrade").value,
+                name: document.getElementById("tName").value,
+                form: document.getElementById("tForm").value,
+                mins: document.getElementById("tMinutes").value,
+                count: document.getElementById("tCount").value
+            }));
+        }
+    }
+
+    async function init() {
+        if (isStudent) {
+            document.getElementById("teacherView").style.display = "none";
+            document.getElementById("overlay").style.display = "flex";
+            document.getElementById("studentUI").style.display = "block";
+            roomId = urlParams.get("room");
+            timeLeft = parseInt(urlParams.get("time")) * 60;
+            updateTimer();
+            await faceapi.nets.tinyFaceDetector.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/');
+        }
+    }
+
+    function generateLink() {
+        const s = document.getElementById("tSubj").value, g = document.getElementById("tGrade").value, t = document.getElementById("tName").value, f = document.getElementById("tForm").value;
+        if (!s || !g || !t || !f) return alert("Fill all fields.");
+        const seed = btoa(g + t).substring(0, 10).toLowerCase();
+        let finalForm = f + (f.includes('?') ? '&hl=en' : '?hl=en');
+        document.getElementById("copyLink").value = `${window.location.origin}${window.location.pathname}?form=${encodeURIComponent(finalForm)}&time=${document.getElementById("tMinutes").value}&room=${seed}&subj=${encodeURIComponent(s)}`;
+        saveFields();
+    }
+
+    function initTeacher() {
+        roomId = btoa(document.getElementById("tGrade").value + document.getElementById("tName").value).substring(0, 10).toLowerCase();
+        peer = new Peer(roomId, { config: PEER_CONFIG });
+        
+        peer.on('open', () => {
+            document.getElementById("roomStatus").style.display = "block";
+            document.getElementById("roomStatus").innerText = `● LIVE PROCTORING ACTIVE`;
+            window.onbeforeunload = () => "Session data will be lost!";
+        });
+
+        const grid = document.getElementById("grid");
+        grid.innerHTML = "";
+        for (let i = 1; i <= document.getElementById("tCount").value; i++) {
+            grid.innerHTML += `
+                <div class="student-box" id="slot-${i}" data-occupied="false" data-sid="">
+                    <video class="grid-video" autoplay muted playsinline webkit-playsinline></video>
+                    <div class="log-section">
+                        <div class="log-line"><b>Name:</b> <span class="s-name">Station ${i}</span></div>
+                        <div class="log-line"><b>ID:</b> <span class="s-id">---</span></div>
+                        <div class="log-line">Start: <span class="log-val t-start">--:--</span> | End: <span class="log-val t-end">Live</span></div>
+                        <div class="log-line">Tabs: <span class="log-val v-t">0</span> | Gaze: <span class="log-val v-g">0</span></div>
+                    </div>
+                </div>`;
+        }
+
+        peer.on('call', call => {
+            call.answer(); 
+            call.on('stream', remStream => {
+                let slot = Array.from(document.querySelectorAll('.student-box')).find(s => s.dataset.sid === call.metadata.id) || 
+                           Array.from(document.querySelectorAll('.student-box')).find(s => s.dataset.occupied === "false");
+                if (slot) {
+                    slot.dataset.occupied = "true"; slot.dataset.sid = call.metadata.id;
+                    const v = slot.querySelector('video');
+                    v.srcObject = remStream;
+                    v.play().catch(() => {});
+                    slot.querySelector('.s-name').innerText = call.metadata.name;
+                    slot.querySelector('.s-id').innerText = call.metadata.id;
+                    slot.classList.add('active');
+                }
+            });
+        });
+
+        peer.on('connection', conn => {
+            dataConns[conn.peer] = conn;
+            conn.on('data', d => {
+                const box = document.querySelector(`.student-box[data-sid="${d.sid}"]`);
+                if (box) {
+                    box.querySelector('.v-t').innerText = d.tabs; box.querySelector('.v-g').innerText = d.gazes;
+                    box.querySelector('.t-start').innerText = d.start; box.querySelector('.t-end').innerText = d.end || "Live";
+                    if (d.tabs > 1) box.classList.add('warning');
+                }
+            });
+        });
+    }
+
+    async function startOfficialTest() {
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: 320 } });
+            document.getElementById("localCam").srcObject = stream;
+            document.getElementById("localCam").style.display = "block";
+            document.getElementById("btnStart").style.display = "none";
+            document.getElementById("postStartActions").style.display = "block";
+            isRunning = true;
+            examStart = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(()=>{});
+
+            peer = new Peer({ config: PEER_CONFIG });
+            peer.on('open', (id) => {
+                const meta = { name: document.getElementById("sName").value, id: document.getElementById("sID").value };
+                const loop = () => {
+                    if (!isRunning) return;
+                    peer.call(roomId, stream, { metadata: meta });
+                    const c = peer.connect(roomId);
+                    c.on('data', d => { if (d.cmd === "KICK_ALL") endSession(); });
+                    window.activeConn = c; sync();
+                };
+                loop(); setInterval(loop, 10000); // Faster heartbeat for reliability
+            });
+
+            setInterval(() => { if (isRunning) { timeLeft--; updateTimer(); if (timeLeft <= 0) endSession(); } }, 1000);
+            document.addEventListener("visibilitychange", () => { if (document.hidden && isRunning) { window.tC = (window.tC || 0) + 1; sync(); } });
+            setInterval(async () => {
+                if (!isRunning) return;
+                const det = await faceapi.detectSingleFace(document.getElementById("localCam"), new faceapi.TinyFaceDetectorOptions());
+                if (!det) { window.gC = (window.gC || 0) + 1; sync(); }
+            }, 4000);
+        } catch (e) { alert("Camera Permission Required."); }
+    }
+
+    function sync(endTime = null) {
+        if (window.activeConn && window.activeConn.open) {
+            window.activeConn.send({ sid: document.getElementById("sID").value, name: document.getElementById("sName").value, tabs: window.tC || 0, gazes: window.gC || 0, start: examStart, end: endTime });
+        }
+    }
+
+    function updateTimer() {
+        let m = Math.floor(timeLeft / 60), s = timeLeft % 60;
+        document.getElementById("timer").innerText = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    }
+
+    function enterExam() {
+        if (!document.getElementById("sName").value || !document.getElementById("sID").value) return alert("Identify yourself.");
+        document.getElementById("overlay").style.display = "none";
+        document.getElementById("testFrame").src = decodeURIComponent(urlParams.get("form"));
+    }
+
+    function endAllSessions() {
+        if(confirm("End exam for all?")) {
+            Object.values(dataConns).forEach(c => c.send({ cmd: "KICK_ALL" }));
+            localStorage.removeItem('teacherSession');
+            window.onbeforeunload = null;
+            window.location.replace("about:blank");
+        }
+    }
+
+    function finishExam() { if (confirm("Finalize exam?")) endSession(); }
+    function endSession() { 
+        sync(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })); 
+        isRunning = false; 
+        window.location.replace("about:blank"); 
+    }
+
+    function exportReport() {
+        let csv = "Name,ID,Start,End,Tabs,Gaze\n";
+        document.querySelectorAll('.student-box.active').forEach(b => {
+            csv += `"${b.querySelector('.s-name').innerText}","${b.querySelector('.s-id').innerText}","${b.querySelector('.t-start').innerText}","${b.querySelector('.t-end').innerText}",${b.querySelector('.v-t').innerText},${b.querySelector('.v-g').innerText}\n`;
+        });
+        const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'})); a.download = 'Proctor_Report.csv'; a.click();
+    }
+    
+    function loadManualForm() {
+        let url = document.getElementById("manualUrl").value;
+        if (url) { 
+            url += (url.includes('?') ? '&hl=en' : '?hl=en');
+            document.getElementById("testFrame").src = url; 
+        }
+    }
+</script>
+</body>
+</html>
